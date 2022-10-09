@@ -20,7 +20,7 @@ const Draggable = (props) => {
 
   return (
     <div className="draggable-container" style={itemStyle} ref={setNodeRef} {...attributes} {...listeners}>
-      Item {props.id}
+      {props.id}
     </div>
   );
 };
