@@ -1,0 +1,23 @@
+.droppable-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  background-color: #EBECF0;
+  color: #303030;
+  border-radius: 4px;
+  padding: 4px;
+
+  > .title {
+    padding: 0 4px;
+    font-weight: 600;
+    text-align: left;
+  }
+}
+
+.droppable-box {
+  min-height: 80px;
+
+  > *:not(:first-child) {
+    margin-top: 4px;
+  }
+}

@@ -1,19 +1,28 @@
-import React from 'react';
-import {useDraggable} from '@dnd-kit/core';
-import {CSS} from '@dnd-kit/utilities';
+import React from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-export default function Draggable(props) {
-  const {attributes, listeners, setNodeRef, transform} = useDraggable({
-    id: props.id,
-  });
-  const style = transform ? {
-    transform: CSS.Transform.toString(transform)
-  } : undefined;
+import './Draggable.scss'
 
-  
+const Draggable = (props) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition
+  } = useSortable({ id: props.id });
+
+  const itemStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <button ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      {props.children}
-    </button>
+    <div className="draggable-container" style={itemStyle} ref={setNodeRef} {...attributes} {...listeners}>
+      Item {props.id}
+    </div>
   );
-}
+};
+
+export default Draggable;

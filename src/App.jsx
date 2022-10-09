@@ -1,39 +1,121 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
+import React, { useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
-import {DndContext} from '@dnd-kit/core';
-import Droppable from './components/Droppable';
-import Draggable from './components/Draggable';
+import Droppable from "./components/Droppable";
+import Draggable from "./components/Draggable";
+import { arrayMove, insertAtIndex, removeAtIndex, moveBetweenContainers } from "./utils/array";
+
+import './App.scss'
 
 function App() {
-  const containers = ['A', 'B', 'C'];
-  const [parent, setParent] = useState(null);
-  const draggableMarkup = (
-    <Draggable id="draggable">Drag me</Draggable>
+  const [items, setItems] = useState({
+    group1: ["1", "2", "3"],
+    group2: ["4", "5", "6"],
+    group3: ["7", "8", "9"]
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates
+    })
   );
+
+  const handleDragOver = ({ over, active }) => {
+    const overId = over?.id;
+
+    if (!overId) {
+      return;
+    }
+
+    const activeContainer = active.data.current.sortable.containerId;
+    const overContainer = over.data.current?.sortable.containerId;
+
+    if (!overContainer) {
+      return;
+    }
+
+    if (activeContainer !== overContainer) {
+      setItems((items) => {
+        const activeIndex = active.data.current.sortable.index;
+        const overIndex = over.data.current?.sortable.index || 0;
+
+        return moveBetweenContainers(
+          items,
+          activeContainer,
+          activeIndex,
+          overContainer,
+          overIndex,
+          active.id
+        );
+      });
+    }
+  };
+
+  const handleDragEnd = ({ active, over }) => {
+    if (!over) {
+      return;
+    }
+
+    if (active.id !== over.id) {
+      const activeContainer = active.data.current.sortable.containerId;
+      const overContainer = over.data.current?.sortable.containerId || over.id;
+      const activeIndex = active.data.current.sortable.index;
+      const overIndex = over.data.current?.sortable.index || 0;
+
+      setItems((items) => {
+        let newItems;
+        if (activeContainer === overContainer) {
+          newItems = {
+            ...items,
+            [overContainer]: arrayMove(
+              items[overContainer],
+              activeIndex,
+              overIndex
+            )
+          };
+        } else {
+          newItems = moveBetweenContainers(
+            items,
+            activeContainer,
+            activeIndex,
+            overContainer,
+            overIndex,
+            active.id
+          );
+        }
+
+        return newItems;
+      });
+    }
+  };
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
-      {parent === null ? draggableMarkup : null}
-
-      {containers.map((id) => (
-        // We updated the Droppable component so it would accept an `id`
-        // prop and pass it to `useDroppable`
-        <Droppable key={id} id={id}>
-          {parent === id ? draggableMarkup : 'Drop here'}
-        </Droppable>
-      ))}
-    </DndContext>
+    <div className="App">
+      <DndContext
+        sensors={sensors}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+      >
+          {Object.keys(items).map((group) => (
+            <Droppable id={group} items={items[group]} key={group}>
+              {
+                items[group].map(item => (
+                  <Draggable key={item} id={item}></Draggable>
+                ))
+              }
+            </Droppable>
+          ))}
+      </DndContext>
+    </div>
   );
-
-  function handleDragEnd(event) {
-    const {over} = event;
-
-    // If the item is dropped over a container, set it as the parent
-    // otherwise reset the parent to `null`
-    setParent(over ? over.id : null);
-  }
 }
 
-export default App
+export default App;
