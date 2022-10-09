@@ -1,84 +1,111 @@
-import { arrayMove, insertAtIndex, removeAtIndex, moveBetweenContainers } from "../utils/array";
+import { useState } from "react";
+import { arrayMove } from "@dnd-kit/sortable";
 
-function getActiveOverContainerIndex ({ active, over }) {
-  const activeContainer = active.data.current.sortable.containerId;
-  const overContainer = over.data.current?.sortable.containerId || over.id;
-  const activeIndex = active.data.current.sortable.index;
-  const overIndex = over.data.current?.sortable.index || 0;
+export default function (items, setItems) {
+  const [activeId, setActiveId] = useState();
 
-  return {
-    activeContainer,
-    overContainer,
-    activeIndex,
-    overIndex,
+  function findContainer(id) {
+    if (id in items) {
+      return id;
+    }
+
+    return Object.keys(items).find((key) => items[key].includes(id));
   }
-}
 
-export default function (setItems) {
-  const handleDragOver = ({ over, active }) => {
-    const overId = over?.id;
+  function handleDragStart(event) {
+    const { active } = event;
+    const { id } = active;
 
-    if (!overId || !(over.data.current?.sortable.containerId || over.id)) {
+    setActiveId(id);
+  }
+
+  function handleDragOver(event) {
+    const { active, over, draggingRect } = event;
+    const { id } = active;
+    const { id: overId } = over || {};
+
+    // Find the containers
+    const activeContainer = findContainer(id);
+    const overContainer = findContainer(overId);
+
+    if (
+      !activeContainer ||
+      !overContainer ||
+      activeContainer === overContainer
+    ) {
       return;
     }
 
-    const { activeContainer, activeIndex, overContainer, overIndex } = getActiveOverContainerIndex({ active, over })
+    setItems((prev) => {
+      const activeItems = prev[activeContainer];
+      const overItems = prev[overContainer];
 
-    if (activeContainer === overContainer) {
-      return
-    }
+      // Find the indexes for the items
+      const activeIndex = activeItems.indexOf(id);
+      const overIndex = overItems.indexOf(overId);
 
-    setItems((items) => {
-      return moveBetweenContainers(
-        items,
-        activeContainer,
-        activeIndex,
-        overContainer,
-        overIndex,
-        active.id
-      );
-    });
-  };
-
-  const handleDragEnd = ({ active, over }) => {
-    if (!over) {
-      return;
-    }
-
-    if (active.id === over.id) {
-      return
-    }
-
-    const { activeContainer, activeIndex, overContainer, overIndex } = getActiveOverContainerIndex({ active, over })
-
-    setItems((items) => {
-      let newItems;
-      if (activeContainer === overContainer) {
-        newItems = {
-          ...items,
-          [overContainer]: arrayMove(
-            items[overContainer],
-            activeIndex,
-            overIndex
-          )
-        };
+      let newIndex;
+      if (overId in prev) {
+        // We're at the root droppable of a container
+        newIndex = overItems.length + 1;
       } else {
-        newItems = moveBetweenContainers(
-          items,
-          activeContainer,
-          activeIndex,
-          overContainer,
-          overIndex,
-          active.id
-        );
+        const isBelowLastItem =
+          over &&
+          overIndex === overItems.length - 1 &&
+          draggingRect?.offsetTop > over.rect.offsetTop + over.rect.height;
+
+        const modifier = isBelowLastItem ? 1 : 0;
+
+        newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
       }
 
-      return newItems;
+      return {
+        ...prev,
+        [activeContainer]: [
+          ...prev[activeContainer].filter((item) => item !== active.id)
+        ],
+        [overContainer]: [
+          ...prev[overContainer].slice(0, newIndex),
+          items[activeContainer][activeIndex],
+          ...prev[overContainer].slice(newIndex, prev[overContainer].length)
+        ]
+      };
     });
-  };
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event;
+    const { id } = active;
+    const { id: overId } = over || {};
+
+    const activeContainer = findContainer(id);
+    const overContainer = findContainer(overId);
+
+    if (
+      !activeContainer ||
+      !overContainer ||
+      activeContainer !== overContainer
+    ) {
+      return;
+    }
+
+    const activeIndex = items[activeContainer].indexOf(active.id);
+    const overIndex = items[overContainer].indexOf(overId);
+
+    if (activeIndex !== overIndex) {
+      setItems((items) => ({
+        ...items,
+        [overContainer]: arrayMove(items[overContainer], activeIndex, overIndex)
+      }));
+    }
+
+    setActiveId(null);
+  }
 
   return {
+    activeId,
+    handleDragEnd,
     handleDragOver,
-    handleDragEnd
+    handleDragStart,
   }
 }

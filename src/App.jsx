@@ -4,7 +4,9 @@ import {
   KeyboardSensor,
   PointerSensor,
   useSensor,
-  useSensors
+  useSensors,
+  DragOverlay,
+  closestCorners
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
@@ -27,12 +29,14 @@ function App() {
     })
   );
 
-  const { handleDragOver, handleDragEnd } = useDragContext(setItems)
+  const { activeId, handleDragStart, handleDragOver, handleDragEnd } = useDragContext(items, setItems)
 
   return (
     <div className="App">
       <DndContext
         sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
       >
@@ -45,6 +49,7 @@ function App() {
             }
           </Droppable>
         ))}
+        <DragOverlay>{activeId ? <Draggable id={activeId} /> : null}</DragOverlay>
       </DndContext>
     </div>
   );

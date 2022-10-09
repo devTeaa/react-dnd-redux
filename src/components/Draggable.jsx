@@ -10,12 +10,14 @@ const Draggable = (props) => {
     listeners,
     setNodeRef,
     transform,
-    transition
+    transition,
+    isDragging
   } = useSortable({ id: props.id });
 
   const itemStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
+    cursor: isDragging ? 'grabbing' : 'grab'
   };
 
   return (
